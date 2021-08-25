@@ -1,0 +1,112 @@
+﻿
+@page "/RepPainel"
+@layout MainLayout
+
+
+@inject NavigationManager navigation;
+@inject IJSRuntime jsRuntime;
+@inject Business.BLL.RequisicoesPessoal.Interfaces.IRequisicaoPessoalService repService;
+@inject Radzen.DialogService dialogService;
+@inject Business.BLL.Cadastros.Interfaces.IDepartamentoService departamentoService;
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <MatButton Raised="true" @onclick="Incluir" Icon="assignment_ind">Nova Requisição</MatButton>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<MatDivider></MatDivider>
+<br />
+
+<div class="container-fluid">
+    <REPLista Requisicoes="@Requisicoes" OnRepSelecionadoCallBack="@HandleCallBack" />
+</div>
+
+
+
+@code {
+
+    public Opcoes TipoOperacao { get; set; }
+    private IList<RequisicaoPessoal> Requisicoes { get; set; }
+    private RequisicaoPessoal rep;
+    private bool autorizado = false;
+    CadastroModelView session;
+
+    protected override async Task OnInitializedAsync()
+    {
+        dialogService.OnClose += EventCloseFormHandler;
+        var result = await jsRuntime.InvokeAsync<string>("getData", "session");
+        session = Newtonsoft.Json.JsonConvert.DeserializeObject<CadastroModelView>(result);
+
+        Requisicoes = await this.repService.ListByMatriculaAsync(session.Funcionario.RA_MAT);
+
+
+    }
+
+    protected override bool ShouldRender()
+    {
+        autorizado =  this.departamentoService.AutorizadoFazerREP(session.Funcionario.RA_MAT);
+        if (!autorizado)
+        {
+            navigation.NavigateTo($"/NaoAutorizado/{"Usuário sem acesso a essa funcionalidade"}/{"Sua credencial não está autorizada a acessar essa parte do sistema."}");
+        }
+
+        return autorizado;
+    }
+
+
+    private void Incluir()
+    {
+        TipoOperacao = Opcoes.Incluir;
+        dialogService.Open<RepForm>("Requisição de Pessoal -" + Enum.GetName(typeof(Opcoes), TipoOperacao),
+            null,
+            new Radzen.DialogOptions { Width = "60%", });
+    }
+
+
+    private void Editar()
+    {
+        dialogService.Open<RepForm>("Requisição de Pessoal -" + Enum.GetName(typeof(Opcoes), TipoOperacao),
+            new Dictionary<string, object> { { "Rep", rep }, { "Opcao", TipoOperacao } },
+            new Radzen.DialogOptions { Width = "60%", }); ;
+
+    }
+
+    private void Excluir()
+    {
+        dialogService.Open<RepForm>("Requisição de Pessoal -" + Enum.GetName(typeof(Opcoes), TipoOperacao),
+            new Dictionary<string, object> { { "Rep", rep }, { "Opcao", TipoOperacao } },
+            new Radzen.DialogOptions { Width = "60%", }); ;
+
+    }
+
+    private async void EventCloseFormHandler(dynamic _sucess)
+    {
+        //dialogService.Close();
+        Requisicoes = await this.repService.ListByMatriculaAsync(session.Funcionario.RA_MAT);
+        this.StateHasChanged();
+    }
+
+
+
+    private void HandleCallBack(RequisicaoPessoalCallBack repCallback)
+    {
+        rep = repCallback.Rep;
+        TipoOperacao = repCallback.Opcao;
+
+        if (repCallback.Opcao == Opcoes.Alterar)
+        {
+            Editar();
+        }
+
+        if (repCallback.Opcao == Opcoes.Excluir)
+        {
+            Excluir();
+        }
+
+    }
+}

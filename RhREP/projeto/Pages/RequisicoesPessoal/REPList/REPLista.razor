@@ -1,0 +1,62 @@
+﻿
+
+<RadzenGrid AllowFiltering="true"
+            AllowPaging="true"
+            PageSize="25"
+            AllowSorting="true"
+            Data="@requisicoes"
+            TItem="RequisicaoPessoal" 
+            AllowColumnResize="true">
+    <Columns>
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.SQS_RH3COD)" Title="Requisição" />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_DESCRIC)" Title="Descr.Vacant" />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_FILRESP)" Title="Suc.Resp." />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_SOLICIT)" Title="Solicit.Vaga" />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_XFILVAG)" Title="Filial Vaga" />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_XFINALI)" Title="Tipo de Vaga" />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_CC  )" Title="Centro de Custo" />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_XDPROJE)" Title="Mat. Selec." />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_XPREVFE)" Title="Prev. Fecham" />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Property="@nameof(RequisicaoPessoal.QS_XNOMESE)" Title="Nome Selec. " />
+        <RadzenGridColumn TItem="RequisicaoPessoal" Title="Editar">
+            <Template Context="rep">
+                <RadzenButton Size="Radzen.ButtonSize.Small" Icon="edit" Click="@(async ()=> await Executar(rep,Opcoes.Alterar))"></RadzenButton>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn TItem="RequisicaoPessoal" Title="Excluir">
+            <Template Context="rep">
+                <RadzenButton ButtonStyle="Radzen.ButtonStyle.Danger" Size="Radzen.ButtonSize.Small" Icon="delete" Click="@(async ()=> await Executar(rep,Opcoes.Excluir))"></RadzenButton>
+            </Template>
+        </RadzenGridColumn>
+    </Columns>
+</RadzenGrid>
+
+@code {
+
+    [Parameter]
+    public IList<RequisicaoPessoal> Requisicoes { get; set; }
+
+    [Parameter]
+    public EventCallback<RequisicaoPessoalCallBack> OnRepSelecionadoCallBack { get; set; }
+
+    private IList<RequisicaoPessoal> requisicoes { get; set; }
+
+
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        requisicoes = Requisicoes;
+    }
+
+
+    private async Task Executar(RequisicaoPessoal rep, Opcoes opcao)
+    {
+        await OnRepSelecionadoCallBack.InvokeAsync(new RequisicaoPessoalCallBack
+        {
+            Rep = rep,
+            Opcao = opcao
+        });
+    }
+
+}

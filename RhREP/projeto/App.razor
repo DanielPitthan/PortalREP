@@ -1,0 +1,23 @@
+﻿
+@using Microsoft.AspNetCore.Http
+
+@inject NavigationManager NavigationManager
+@inject IHttpContextAccessor httpContextAccessor
+
+
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(LoginLayout)" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <RHRep.Pages.Errors.PageNotFound></RHRep.Pages.Errors.PageNotFound>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code{
+
+
+}

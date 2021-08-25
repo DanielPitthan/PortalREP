@@ -1,0 +1,112 @@
+﻿@page  "/login"
+
+
+@using Models.Admin
+@using Microsoft.AspNetCore.WebUtilities
+
+@layout LoginLayout
+@inject BLL.Logins.Interfaces.ILoginService loginService
+@inject NavigationManager navigator;
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+
+<div class="row justify-content-center">
+    <div class="col col-6 col-md-6 col-lg-6">
+        <RadzenCard Visible="true" Style="width: 500px; margin-top:20%">
+            <div class="row justify-content-center">
+                <h3>Portal de Chamados </h3>
+            </div>
+            <div class="row" style="width:50%;margin-left:25%;">
+                <RadzenImage Path="_content/img/Logos/LGMID.PNG"></RadzenImage>
+            </div>
+            <div class="row">
+                <MatTextField FullWidth="true"
+                              @bind-Value="loginModelView.Login"
+                              HelperText="Usuario"
+                              Label="Usuário"
+                              Icon="@MatIconNames.Account_circle"
+                              IconTrailing="true"
+                              Format="## ### ### ###">
+
+                </MatTextField>
+                <RadzenDatePicker @bind-Value="_dataNascimento" Style="width:100%;" Placeholder="Data de Nascimento" ShowTime="false" DateFormat="d"></RadzenDatePicker>
+            </div>
+            <br />
+            <br />
+            <button class="btn btn-primary btn-block" @onclick="EfetuarLogin">Efetuar Login</button>
+        </RadzenCard>
+
+    </div>
+</div>
+<MatSnackbar IsOpen="@isOpen">
+    <MatSnackbarContent>
+        Usuário ou senha inválido.
+    </MatSnackbarContent>
+    <MatSnackbarActions>
+        <MatButton @onclick="@(()=> isOpen=false)">OK</MatButton>
+    </MatSnackbarActions>
+</MatSnackbar>
+
+<ErrorDisplay Error="@Error" />
+
+
+@code {
+
+
+    private string _ticketResposta;
+    private DateTime _dataNascimento;
+
+    private LoginModelView loginModelView = new LoginModelView();
+    private Models.Admin.Login User = new Models.Admin.Login();
+
+    private bool isOpen = false;
+
+    private System.Uri uri;
+    private string Error = "";
+
+
+    protected override void OnInitialized()
+    {
+        uri = navigator.ToAbsoluteUri(navigator.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ticket", out var aVal))
+        {
+            _ticketResposta = aVal;  //Jogo o valor definido no parâmetro para evitar o rerender constante
+        }
+    }
+
+
+    private async Task EfetuarLogin()
+    {
+        User.RD0_CODIGO = loginModelView.Login;
+        User.RD0_EMAIL = loginModelView.Login;
+        User.RD0_USER = loginModelView.Login;
+        User.RD0_CIC = loginModelView.Login;
+        User.RD0_SENHA = loginModelView.Senha;
+        User.RD0_DTNASC = _dataNascimento.ToString("yyyyMMdd");
+
+        try
+        {
+
+            if (await loginService.EfetuarLogin(User))
+            {
+                if (_ticketResposta != null)
+                {
+                    navigator.NavigateTo($"/ticketsPainel/{_ticketResposta}");
+                }
+                else
+                {
+                    navigator.NavigateTo("/home");
+                }
+            }
+
+            isOpen = true;
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message + ex.InnerException;
+
+        }
+
+
+    }
+
+}

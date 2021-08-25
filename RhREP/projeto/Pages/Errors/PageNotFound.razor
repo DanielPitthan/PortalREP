@@ -1,0 +1,22 @@
+﻿@inject NavigationManager navigateManager
+
+    <div class="container-fluid">
+        <Jumbotron Background="Background.White" Style="margin-top:10%">
+            <JumbotronTitle Size="JumbotronTitleSize.Is3">
+
+                <img src="/_content/img/Icons/sorry.png" class="img-fluid" style="max-width:300px;"/> Que pena... esse endereço não existe
+            </JumbotronTitle>
+            <JumbotronSubtitle>
+                <MatButton @onclick="GoHome">Voltar a Home</MatButton>
+            </JumbotronSubtitle>
+        </Jumbotron>
+    </div>
+
+    @code {
+
+        private void GoHome()
+        {
+            navigateManager.NavigateTo("/");
+        }
+
+    }

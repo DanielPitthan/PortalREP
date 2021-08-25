@@ -1,0 +1,106 @@
+﻿@inherits LayoutComponentBase
+@inject Microsoft.Extensions.Configuration.IConfiguration cfg;
+
+@inject IJSRuntime jsRuntimeService;
+@inject Business.BLL.Cadastros.Interfaces.IDepartamentoService departamentoService;
+<RadzenDialog />
+
+<MatThemeProvider Theme="tema1">
+    <MatDrawerContainer>
+        <MatDrawer @bind-Opened="IsOpen" Mode="@MatDrawerMode.Dismissible">
+            <MatNavMenu>
+                <MatNavSubMenu>
+                    <MatNavSubMenuHeader>
+                        <MatNavItem AllowSelection="false">
+                            <img src="/_content/img/Icons/icons8-meeting-room-100.png" style=" width:30px;" />Requisição de Pessoal
+                        </MatNavItem>
+                    </MatNavSubMenuHeader>
+                    <MatNavSubMenuList>
+                        <MatNavItem Href="RepPainel"><a href="#"><img src="/_content/img/Icons/writing.png" /></a> REP</MatNavItem>
+                    </MatNavSubMenuList>
+                </MatNavSubMenu>
+            </MatNavMenu>
+        </MatDrawer>
+        <MatDrawerContent>
+            <MatAppBarContainer>
+                <MatAppBar Fixed="true">
+                    <MatAppBarRow>
+                        <MatAppBarSection Align="@MatAppBarSectionAlign.Start">
+                            <a href="#" @onclick:preventDefault><img src="/_content/img/Icons/hamburger_menu.png" style=" width:20px; color:white; margin-right:2rem;" @onclick="AbreMenu" /></a>
+                            <NavLink href="home" Match="NavLinkMatch.All"> <img src="/_content/img/Icons/home.png" style=" width:20px; color:white; margin-right:2rem;" /></NavLink>
+                            <MatIconButton Icon="@MatIconNames.Exit_to_app" Link="/"></MatIconButton>
+                            <MatAppBarTitle>Procisa - Portal de Requisição de Pessoal (REP)</MatAppBarTitle>
+                        </MatAppBarSection>
+
+                    </MatAppBarRow>
+                </MatAppBar>
+                <MatAppBarContent>
+                    @Body
+                    @if (IsTest)
+                    {
+                        <div class="alert alert-danger" style="margin-top:200px;">
+                            Trabalhando em ambiente de Teste
+                        </div>
+                    }
+                    <div class="alert alert-light">
+                        @if (cadastro != null)
+                            GetInfo();
+                    </div>
+
+                </MatAppBarContent>
+            </MatAppBarContainer>
+        </MatDrawerContent>
+    </MatDrawerContainer>
+</MatThemeProvider>
+
+@code{
+    private bool autorizado = false;
+    private bool IsOpen = false;
+    private bool IsTest = false;
+    private Models.Cadastros.CadastroModelView cadastro = new Models.Cadastros.CadastroModelView();
+
+
+    MatTheme tema1 = new MatTheme()
+    {
+        Primary = MatThemeColors.Blue._800.Value,
+        Secondary = MatThemeColors.Grey._400.Value,
+        OnPrimary = MatThemeColors.Grey._50.Value
+
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetEnviroment();
+        var result = await jsRuntimeService.InvokeAsync<string>("getData", "session");
+        cadastro = Newtonsoft.Json.JsonConvert.DeserializeObject<Models.Cadastros.CadastroModelView>(result);
+        autorizado = this.departamentoService.AutorizadoFazerREP(cadastro.Funcionario.RA_MAT);
+    }
+
+
+    private void AbreMenu()
+    {
+
+        IsOpen = !IsOpen;
+    }
+
+    private void FechaMenu()
+    {
+        IsOpen = false;
+
+    }
+
+    private void GetEnviroment()
+    {
+
+        var Stage = cfg["Stage"];
+        IsTest = Stage.Contains("Test");
+    }
+
+    string GetInfo()
+    {
+        if (cadastro.Funcionario != null)
+            return $"Login: {cadastro.Funcionario.RA_NOME} - Painel de Chamados -{DateTime.Now.ToString("dd/MM/yyyy")} - Versão do Framework.net 5.0.1 Blazor";
+        else
+            return "";
+    }
+}

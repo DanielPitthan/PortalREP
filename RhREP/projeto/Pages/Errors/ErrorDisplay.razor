@@ -1,0 +1,31 @@
+﻿
+
+@if (!string.IsNullOrEmpty(Error))
+{
+    <br />
+
+    <div class="container-fluid">
+        <div class="row">
+            <h6>@Title</h6>
+            <div class="alert alert-danger">
+                <a class="dismiss" @onclick:preventDefault @onclick="ClearError">🗙</a>
+                <b>Erro:</b><p>@Error</p>
+            </div>
+        </div>
+    </div>
+    <br />
+}
+
+
+@code {
+    [Parameter]
+    public string Error { get; set; }
+    [Parameter]
+    public string Title { get; set; }
+
+    private void ClearError()
+    {
+        Error = "";
+        this.StateHasChanged();
+    }
+}

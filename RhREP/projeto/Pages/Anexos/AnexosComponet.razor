@@ -1,0 +1,167 @@
+﻿
+@using System.IO;
+@using Models.Tickets
+@inject RHRep.BLL.Tickets.Interfaces.IImagensTicketService imagensService;
+
+
+
+<fieldset>
+    <div class="row">
+        <div class="col-12 col-md-12 col-lg-12 col-xl-12">
+            <MatFileUpload Label="Anexos" OnChange="@UploadFile" @attributes="atributosUpload"></MatFileUpload>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 col-md-12 col-lg-12 col-xl-12">
+            <small><i>(Arquivos válidos:.jpg, .png, .jpeg, .gif, .pdf, .doc, .docx, .xls, .csv, .xlsx )</i> </small>
+        </div>
+    </div>
+    <div class="row align-content-end justify-content-end">
+        <div class="col-12 col-md-12 col-lg-12 col-xl-12">
+            <MatButton Icon="@MatIconNames.Clear_all" @onclick="LimparImagens" Style="color:red !important">Remover imagens</MatButton>
+        </div>
+    </div>
+    @if (Imagens != null)
+    {
+        <div class="row">
+
+            @foreach (var imagem in Imagens)
+            {
+                @if (extensoesImagens.Contains(imagem.Extensao))
+                {
+                    <div class="col-12 col-md-12 col-lg-12">
+                        <RadzenImage Path="@string.Format($"data:image/{imagem.Extensao.Replace(".", "")};base64," + "{0}", imagem.ImgBase64)" class="img-fluid rounded float-left imageUpload" />
+                    </div>
+                }
+                else
+                {
+                    <div class="col-12">
+                        <p>@imagem.NomeOriginal - @imagem.Tamanho bytes</p>
+                    </div>
+                }
+
+
+            }
+        </div>
+    }
+</fieldset>
+
+
+
+
+<MatSnackbar IsOpen="@IsOpenAviso">
+    <MatSnackbarContent>
+        <p>@aviso</p>
+    </MatSnackbarContent>
+    <MatSnackbarActions>
+        <MatButton @onclick="@(()=> {
+                                   IsOpenAviso = false;
+                               })">OK</MatButton>
+    </MatSnackbarActions>
+</MatSnackbar>
+
+
+@code {
+    [Parameter]
+    public IList<ImagensTickets> Imagens { get; set; }
+
+    [Parameter]
+    public EventCallback<IList<ImagensTickets>> AnexosCallBack { get; set; }
+
+    [Parameter]
+    public bool RemoveImagens { get; set; }
+
+
+    Dictionary<string, object> atributosUpload { get; set; } = new Dictionary<string, object>()
+{
+            { "Id","uploadImg" }
+    };
+    private string aviso = "";
+    private bool IsOpenAviso;
+    private string[] extensoesValidas = new string[] { ".jpg", ".png", ".jpeg", ".gif", ".pdf", ".doc", ".docx", ".xls", ".csv", ".xlsx" };
+    private string[] extensoesImagens = new string[] { ".jpg", ".png", ".jpeg", ".gif", ".pdf", ".doc", ".docx", ".xls", ".csv", ".xlsx" };
+
+
+    protected override void OnParametersSet()
+    {
+        if (RemoveImagens)
+        {
+            LimparImagens();
+        }
+    }
+
+
+    protected override void OnInitialized()
+    {
+        Imagens = new List<ImagensTickets>();
+        RemoveImagens = false;
+    }
+
+    /// <summary>
+    /// Faz o upload dos arquivos
+    /// </summary>
+    /// <param name="files"></param>
+    /// <returns></returns>
+    private async Task UploadFile(IMatFileUploadEntry[] files)
+    {
+
+
+
+        byte[] imageBytes;
+
+
+        if (files.Sum(x => x.Size) > 4194304)
+        {
+            aviso = @$"Não e permitido enviar mais que 4Mb de anexos.";
+            LimparImagens();
+        }
+
+        //Grava temporário a  imagem
+        foreach (var file in files)
+        {
+            string extension = Path.GetExtension(file.Name);
+
+            if (!extensoesValidas.Contains(extension.ToLower()) && !file.Type.Contains("image"))
+            {
+                aviso = @$"Arquivo inválido: {file.Name}. Formatos aceitos:  jpg,png,jpeg,gif,pdf,doc,docx,xls,csv,xlsx ";
+                IsOpenAviso = true;
+                LimparImagens();
+                break;
+            }
+
+
+
+            string newFileName = $"{Guid.NewGuid()}{extension}";
+
+
+            using (var mStream = new MemoryStream())
+            {
+                await file.WriteToStreamAsync(mStream);
+                imageBytes = mStream.ToArray();
+            }
+
+
+            ImagensTickets imagem = new ImagensTickets();
+            imagem.Ativo = true;
+            imagem.DataInclusao = DateTime.Now;
+            imagem.Nome = newFileName;
+            imagem.NomeOriginal = file.Name;
+            imagem.Extensao = extension.ToLower();
+            imagem.Tamanho = file.Size;
+            imagem.ImgBase64 = Convert.ToBase64String(imageBytes);
+
+            Imagens.Add(imagem);
+            this.StateHasChanged();
+        }
+
+        await AnexosCallBack.InvokeAsync(Imagens);
+        Array.Clear(files, 0, files.Length);
+    }
+
+
+    private void LimparImagens()
+    {
+        Imagens.Clear();
+
+    }
+}

@@ -1,0 +1,882 @@
+﻿@page "/RepForm/{Rep?}/{Opcao?}"
+
+
+@layout MainLayout
+
+@inject Radzen.DialogService dialogService;
+@inject IJSRuntime jsRuntime;
+
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage;
+@inject Business.BLL.Cadastros.Interfaces.ICentroCustoService centroCustoService;
+@inject Business.BLL.Cadastros.Interfaces.IMunicipiosUFService municipiosServices;
+@inject Business.BLL.Cadastros.Interfaces.IEmpresaService empresaService;
+@inject Business.BLL.Cadastros.Interfaces.ICargoService cargoService;
+@inject Business.BLL.Cadastros.Interfaces.ITurnoService turnoService;
+@inject Business.BLL.Cadastros.Interfaces.IFuncionarioService funcionarioService;
+@inject Business.BLL.Cadastros.Interfaces.IBaseService baseService;
+@inject Business.BLL.Cadastros.Interfaces.ITabelaGenericaX5Service tabelaGenericaService;
+@inject Business.BLL.RequisicoesPessoal.Interfaces.IRequisicaoPessoalService repService;
+
+
+
+<EditForm EditContext="@editContext" OnSubmit="@HandleSubmit">
+
+    <DataAnnotationsValidator />
+    <RadzenFieldset>
+        <div class="row text-center border blue lighten-3">
+            <h5>INFORMAÇÕES DA ÁREA SOLICITANTE DA VAGA</h5>
+        </div>
+        <br />
+        <div class="row">
+            <table class="table table-bordered">
+                <thead>
+                    <tr class="table-primary">
+                        <th>Data Emissão</th>
+                        <th>PROJETO Ax</th>
+                        <th>UF de Atuação</th>
+                        <th>Cidade de Atuação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>@emissao.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            <RadzenDropDown AllowClear="true" TValue="string"
+                                            AllowFiltering="true"
+                                            @bind-Value="centroCusto"
+                                            Data="@centrosDeCustos" TextProperty="CTT_CUSTO" ValueProperty="CTT_CUSTO" Change=@(args => SetCentroCusto(args))
+                                            Disabled="@disabled"
+                                            Style="width:100%;">
+                                <Template Context="c">
+                                    @($"{(c as CentroCusto).CTT_CUSTO}-{(c as CentroCusto).CTT_DESC01}")
+                                </Template>
+                            </RadzenDropDown>
+
+                        </td>
+                        <td>
+                            <RadzenDropDown AllowClear="true" TValue="string"
+                                            AllowFiltering="true"
+                                            Data="@estados" TextProperty="UF" ValueProperty="UF" Change=@(async (args)=> await SetUF(args))
+                                            Disabled="@disabled"
+                                            Style="width:100%;"
+                                            @bind-Value="estado">
+
+                            </RadzenDropDown>
+                        </td>
+                        <td>
+                            <RadzenDropDown AllowClear="true" TValue="string"
+                                            AllowFiltering="true"
+                                            Data="@municipiosUF" TextProperty="CC2_MUN" ValueProperty="CC2_CODMUN" Change=@(async (args)=> await SetMunicipioUF(args))
+                                            Disabled="@disabled"
+                                            Style="width:100%;"
+                                            @bind-Value="codigoIbge">
+
+                            </RadzenDropDown>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row">
+            <table class="table table-bordered">
+                <thead>
+                    <tr class="table-primary">
+                        <th>Base</th>
+                        <th>Filial</th>
+                        <th>Requisitante</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+
+                            <RadzenDropDown AllowClear="true" TValue="string"
+                                            AllowFiltering="true"
+                                            Data="@bases" TextProperty="RBS_DESCRI" ValueProperty="RBS_CODIGO" @bind-Value="rep.QS_XBASE"
+                                            Disabled="@disabled"
+                                            Style="width:100%;">
+                                <Template Context="c">
+                                    @((c as Base).RBS_CODIGO)-@((c as Base).RBS_DESCRI)
+                                </Template>
+                            </RadzenDropDown>
+                        </td>
+                        <td>
+                            <RadzenDropDown AllowClear="true" TValue="string"
+                                            AllowFiltering="true"
+                                            Data=@empresas TextProperty="M0_FILIAL" ValueProperty="M0_CODFIL" Change=@(async (args)=> await SetFilial(args))
+                                            Disabled="@disabled"
+                                            Style="width:100%;"
+                                            @bind-Value="rep.QS_XFILVAG" @ref="filialRef">
+
+                            </RadzenDropDown>
+                        </td>
+                        <td><RadzenTextBox @bind-Value="nomeResponsavel" Disabled="true" Style="width:100%;" /></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row text-center border blue lighten-3">
+            <h5>INFORMAÇÕES SOBRE A VAGA</h5>
+        </div>
+        <br />
+        <div class="row">
+            <table class="table table-bordered">
+                <thead>
+                    <tr class="table-primary">
+                        <th>Qtd. de Vagas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><RadzenNumeric @bind-Value="rep.QS_NRVAGA" Disabled="@disabled" Step="1" /></td>
+
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <br />
+        <MatDivider />
+        <br />
+        <div class="row">
+            <div class="col col-lg-6 col-md-6">
+                <div class="row">
+                    <RadzenRadioButtonList Disabled="@disabled"
+                                           TValue="int"
+                                           @bind-Value="finalidadeContratacao"
+                                           Orientation="Radzen.Orientation.Horizontal"
+                                           Change=@(async (args)=> await SetFinalidade(args))>
+                        <Items>
+                            <RadzenRadioButtonListItem Text="AUMENTO DE QUADRO" Value="1" TValue="int" />
+                            <RadzenRadioButtonListItem Text="SUBSTITUIÇÃO" Value="2" TValue="int" />
+                        </Items>
+                    </RadzenRadioButtonList>
+                </div>
+                <br />
+                <div class="row">
+                    <b>Substituído</b>
+                    <RadzenDropDown AllowClear="true" TValue="string"
+                                    AllowFiltering="true" FilterOperator="Radzen.StringFilterOperator.Contains"
+                                    Data=@funcionarios TextProperty="@nameof(Funcionario.RA_NOME)"
+                                    ValueProperty="@nameof(Funcionario.RA_MAT)"
+                                    Change=@(async (args)=> await SetFuncionarioASubstituir(args))
+                                    Disabled="@disabled"
+                                    Style="width:100%;"
+                                    @bind-Value="matricula">
+                        <Template Context="c">
+                            @((c as Funcionario).RA_MAT)-@((c as Funcionario).RA_NOME)
+                        </Template>
+                    </RadzenDropDown>
+                </div>
+                <br />
+                <div class="row">
+                    <b>Cargo</b>
+                    <RadzenDropDown AllowClear="true" TValue="string"
+                                    AllowFiltering="true"
+                                    Data=@cargos TextProperty="@nameof(Cargo.Q3_DESCSUM)"
+                                    ValueProperty="@nameof(Cargo.Q3_CARGO)"
+                                    Change=@(async (args)=> await SetCargo(args))
+                                    Disabled="@disabled"
+                                    Style="width:100%;"
+                                    @bind-Value="codigoCargo">
+
+                    </RadzenDropDown>
+                </div>
+                <br />
+                <div class="row">
+                    <b>Motivo da Substituição</b>
+                    <RadzenRadioButtonList Disabled="@disabled"
+                                           TValue="int"
+                                           @bind-Value="codigoSubstituicao"
+                                           Orientation="Radzen.Orientation.Horizontal"
+                                           Change=@(async (args)=> await SetMotivoSubstituicao(args))>
+                        <Items>
+                            <RadzenRadioButtonListItem Text="Demissão" Value="1" TValue="int" />
+                            <RadzenRadioButtonListItem Text="Promoção" Value="2" TValue="int" />
+                            <RadzenRadioButtonListItem Text="Afastamento" Value="3" TValue="int" />
+                            <RadzenRadioButtonListItem Text="Transferência" Value="4" TValue="int" />
+                        </Items>
+                    </RadzenRadioButtonList>
+                </div>
+            </div>
+            <div class="col col-lg-6 col-md-6">
+                <RadzenTextArea Style="width:100%" Rows="5" @bind-Value="rep.QS_XMOTIV" Placeholder="Motivo do Aumento de Quadro" Disabled="@disabled" />
+            </div>
+        </div>
+        <br />
+        <MatDivider />
+        <br />
+        <div class="row">
+            <div class="col">
+                <b>Turno</b>
+                <RadzenDropDown AllowClear="true" TValue="string"
+                                AllowFiltering="true"
+                                Data=@turnos TextProperty="@nameof(Turno.R6_DESC)"
+                                ValueProperty="@nameof(Turno.R6_TURNO)"
+                                Change=@(async (args)=> await SetTurno(args))
+                                @bind-Value="codigoTurno"
+                                Disabled="@disabled"
+                                Style="width:100%;">
+
+                </RadzenDropDown>
+            </div>
+            <div class="col">
+                <b>Jornadas de Trabalho</b>
+                <RadzenRadioButtonList Disabled="@disabled"
+                                       TValue="int"
+                                       @bind-Value="codigoJornada"
+                                       Orientation="Radzen.Orientation.Horizontal"
+                                       Change=@(async (args)=> await SetJornada(args))>
+                    <Items>
+                        <RadzenRadioButtonListItem Text="Seg. a Sex." Value="1" TValue="int" />
+                        <RadzenRadioButtonListItem Text="Seg. a Sab." Value="2" TValue="int" />
+                        <RadzenRadioButtonListItem Text="Escala 5x2" Value="3" TValue="int" />
+                        <RadzenRadioButtonListItem Text="Escala 6x1" Value="4" TValue="int" />
+                    </Items>
+                </RadzenRadioButtonList>
+            </div>
+        </div>
+        <br />
+        <Divider DividerType="DividerType.Solid"></Divider>
+        <br />
+        <div class="row">
+            <table class="table table-bordered">
+                <thead>
+                    <tr class="table-primary">
+                        <th>Marcação de Ponto</th>
+                        <th>Regime de Banco de Horas</th>
+                        <th>Responsável pela Gestão do E-ponto</th>
+                        <th>Apoio Operacional para o E-Ponto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><RadzenSwitch @bind-Value="marcaPonto" Change="@SetMarcaPonto" Disabled="@disabled"></RadzenSwitch></td>
+                        <td><RadzenSwitch @bind-Value="temBancoDeHoras" Change="@SetBancoDeHoras" Disabled="@disabled"></RadzenSwitch></td>
+                        @*<td>
+                                <RadzenRadioButtonList Disabled="@disabled"
+                                                       TValue="int"
+                                                       @bind-Value="tipoVaga"
+                                                       Orientation="Radzen.Orientation.Horizontal"
+                                                       Change=@(args=>  SetTipoVaga(args))>
+                                    <Items>
+
+                                        <RadzenRadioButtonListItem Text="Interna e Externa" Value="1" TValue="int" />
+                                        <RadzenRadioButtonListItem Text="Interna" Value="2" TValue="int" />
+                                        <RadzenRadioButtonListItem Text="Externa" Value="3" TValue="int" />
+                                    </Items>
+                                </RadzenRadioButtonList>
+                            </td>*@
+                        <td>
+                            <RadzenDropDown AllowClear="true" TValue="string"
+                                            AllowFiltering="true" FilterOperator="Radzen.StringFilterOperator.Contains"
+                                            Data=@funcionariosEponto TextProperty="@nameof(Funcionario.RA_NOME)"
+                                            ValueProperty="@nameof(Funcionario.RA_MAT)"
+                                            Change=@(async (args)=> await SetFuncionarioASubstituirEponto(args))
+                                            Disabled="@disabled"
+                                            Style="width:100%;"
+                                            @bind-Value="matriculaEponto">
+                                <Template Context="c">
+                                    @((c as Funcionario).RA_MAT)-@((c as Funcionario).RA_NOME)
+                                </Template>
+                            </RadzenDropDown>
+
+                        </td>
+                        <td>
+                            <RadzenDropDown AllowClear="true" TValue="string"
+                                            AllowFiltering="true" FilterOperator="Radzen.StringFilterOperator.Contains"
+                                            Data=@funcionariosEpontoOperacional TextProperty="@nameof(Funcionario.RA_NOME)"
+                                            ValueProperty="@nameof(Funcionario.RA_MAT)"
+                                            Change=@(async (args)=> await SetFuncionarioASubstituirEponto2(args))
+                                            Disabled="@disabled"
+                                            Style="width:100%;"
+                                            @bind-Value="matriculaEpontoOperacional">
+                                <Template Context="c">
+                                    @((c as Funcionario).RA_MAT)-@((c as Funcionario).RA_NOME)
+                                </Template>
+                            </RadzenDropDown>
+
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="row text-center border blue lighten-3">
+            <h5>Observações Sobre a Vaga</h5>
+        </div>
+        <br />
+        <Row>
+            <RadzenTextArea Style="width:100%;"
+                            Rows="5"
+                            Placeholder="Particulariedades de conhecimento e/ou cursos, disponibilidade para viagens e outros"
+                            @bind-Value="detalhesVaga" Disabled="@disabled">
+
+            </RadzenTextArea>
+        </Row>
+        <br />
+        <Divider DividerType="DividerType.Solid"></Divider>
+        <Row>
+            <div class="col">
+                <b>Data do Movimento</b>
+                <RadzenDatePicker @bind-Value=dataMovimento DateFormat="dd-MM-yyyy" Change=@(args => SetDataMovimento(args.Value)) Style="width:100%;" Disabled="@disabled" />
+            </div>
+            @*<div class="col">
+                    <b>Area</b>
+                    <RadzenDropDown AllowClear="true" TValue="string"
+                                    AllowFiltering="true"
+                                    Data=@tabelaR1 TextProperty="@nameof(TabelaGenericaX5.X5_DESCRI)"
+                                    ValueProperty="@nameof(TabelaGenericaX5.X5_CHAVE)"
+                                    Change=@(async (args)=> await SetArea(args))
+                                    Disabled="@disabled"
+                                    Style="width:100%;"
+                                    @bind-Value="area"
+                                    @ref="areaRef">
+                        <Template Context="c">
+                            @((c as TabelaGenericaX5).X5_CHAVE)-@((c as TabelaGenericaX5).X5_DESCRI)
+                        </Template>
+                    </RadzenDropDown>
+                </div>*@
+            @*<div class="col">
+                    <b>Previsão de Fechamento</b>
+                    <RadzenDatePicker @bind-Value=previsaoFechamento DateFormat="dd-MM-yyyy" Change=@(args => SetDataFechamento(args.Value)) Style="width:100%;" Disabled="@disabled" />
+                </div>*@
+        </Row>
+
+        <ErrorDisplay Error="@Error" Title="@Title" />
+
+
+        <div class="row justify-content-end" style="margin-top:1rem;">
+            <div class="col-11">
+                <RadzenButton Click="@(()=> Fechar(false))" ButtonStyle="Radzen.ButtonStyle.Light" Text="Fechar" />
+            </div>
+            <div class="col-1">
+                <RadzenButton Click="@(async ()=> await HandleSubmit())" ButtonStyle="Radzen.ButtonStyle.Secondary" Text="Gravar" />
+            </div>
+        </div>
+    </RadzenFieldset>
+
+</EditForm>
+
+@code {
+
+
+    [Parameter]
+    public RequisicaoPessoal Rep { get; set; }
+
+    [Parameter]
+    public Opcoes Opcao { get; set; }
+
+    public string Error { get; set; }
+    public string Title { get; set; }
+
+    private Opcoes opcao;
+    private RequisicaoPessoal rep;
+    CadastroModelView session;
+
+    private bool disabled;
+
+    private IList<CentroCusto> centrosDeCustos;
+    private IList<MunicipiosUF> municipiosUF;
+    private IList<Estado> estados;
+    private IList<Empresa> empresas;
+    private IList<Cargo> cargos;
+    private IList<Turno> turnos;
+    private IQueryable<Funcionario> funcionarios;
+    private IQueryable<Funcionario> funcionariosEponto;
+    private IQueryable<Funcionario> funcionariosEpontoOperacional;
+    private IList<Base> bases;
+    private IList<TabelaGenericaX5> tabelaR1;
+
+    private MunicipiosUF municipioUF;
+
+    private string codigoTurno;
+    private string codigoCargo;
+    private string estado;
+    private string codigoIbge;
+    private string matricula;
+    private string matriculaEponto;
+    private string matriculaEpontoOperacional;
+    //private string area;
+    private string nomeResponsavel;
+    private string centroCusto;
+    private string detalhesVaga;
+
+    //private bool periculosidade;
+    private bool marcaPonto;
+    private bool temBancoDeHoras;
+
+
+    //private int tipoVaga;
+    private int codigoJornada;
+    private int finalidadeContratacao;
+    private int codigoSubstituicao;
+    private DateTime dataMovimento;
+    private DateTime emissao = DateTime.Now.Date;
+    //private DateTime previsaoFechamento;
+    RadzenDropDown<string> areaRef = new RadzenDropDown<string>();
+    RadzenDropDown<string> filialRef = new RadzenDropDown<string>();
+
+    private EditContext editContext = new EditContext(new RequisicaoPessoal());
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await InitForm();
+    }
+
+
+
+    /// <summary>
+    /// Inicializa as variáveis do formulário
+    /// </summary>
+    /// <returns></returns>
+    private async Task InitForm()
+    {
+
+
+        rep = new RequisicaoPessoal()
+        {
+            QS_DTABERT = DateTime.Now.ToString("yyyyMMdd")
+        };
+
+
+        opcao = Opcoes.Incluir;
+        municipiosUF = new List<MunicipiosUF>();
+
+        centrosDeCustos = await centroCustoService.ListAsync();
+        estados = await municipiosServices.GetEstadosAsync();
+        empresas = await empresaService.ListarAsync();
+        cargos = await cargoService.ListCargosAsync();
+        turnos = await turnoService.ListTurnosAsync();
+        bases = await baseService.ListarAsync();
+        funcionarios = funcionarioService.ListAllByFilial("");
+        funcionariosEponto = funcionarioService.ListAllByFilial("");
+        funcionariosEpontoOperacional = funcionarioService.ListAllByFilial("");
+        tabelaR1 = await tabelaGenericaService.GetTabelaR1Async();
+
+
+        var result = await jsRuntime.InvokeAsync<string>("getData", "session");
+        session = Newtonsoft.Json.JsonConvert.DeserializeObject<CadastroModelView>(result);
+
+        this.nomeResponsavel = session.Funcionario.RA_NOME;
+        // this.rep.QS_XRESPPO = session.Funcionario.RA_MAT;
+        this.rep.QS_FILRESP = session.Funcionario.RA_FILIAL;
+        this.rep.QS_MATRESP = session.Funcionario.RA_MAT;
+        // this.rep.QS_AUTOM = "2";
+        this.rep.QS_REINSC = "1";
+        this.rep.QS_SOLICIT = session.Funcionario.RA_NOME;
+
+        editContext = new EditContext(rep);
+
+    }
+
+
+    /// <summary>
+    /// Grava o REP
+    /// </summary>
+    /// <returns></returns>
+    private async Task HandleSubmit()
+    {
+        if (Opcao == Opcoes.Incluir)
+        {
+
+            try
+            {
+                bool formulárioValido = ValidarCamposObrigatorio();
+                if (formulárioValido)
+                {
+                    if (finalidadeContratacao == 1 && string.IsNullOrEmpty(rep.QS_XMOTIV))
+                    {
+                        Title = "Obrigatório";
+                        Error = "Campo Motivo de Aumento de Quadro não prechido";
+                        return;
+                    }
+
+                    if (finalidadeContratacao == 2 && string.IsNullOrEmpty(rep.QS_XMOTIV) && string.IsNullOrEmpty(matricula))
+                    {
+                        Title = "Obrigatório";
+                        Error = "Campo Motivo de Aumento de Quadro não prechido";
+                        return;
+                    }
+
+
+                    bool result = await repService.AdcionarAsync(rep, detalhesVaga);
+                    Fechar(result);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Error = ex.Message;
+            }
+        }
+
+        if (Opcao == Opcoes.Alterar)
+        {
+
+            try
+            {
+                bool formulárioValido = ValidarCamposObrigatorio();
+                if (formulárioValido)
+                {
+                    bool result = await repService.AlterarAsync(rep, detalhesVaga);
+                    Fechar(result);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Error = ex.Message;
+            }
+        }
+        if (Opcao == Opcoes.Excluir)
+        {
+
+            try
+            {
+                bool result = await repService.ExcluirAsync(rep);
+                Fechar(result);
+            }
+            catch (Exception ex)
+            {
+                Error = ex.Message;
+            }
+        }
+
+    }
+
+
+    private bool ValidarCamposObrigatorio()
+    {
+        Dictionary<string, bool> camposObrigatorios = new Dictionary<string, bool>();
+
+        Type type = rep.GetType();
+        System.Reflection.PropertyInfo[] propriedes = type.GetProperties();
+        foreach (var p in propriedes)
+        {
+            var atributos = p.GetCustomAttributesData();
+            foreach (var a in atributos)
+            {
+                if (a.AttributeType.Name.Equals("RequiredAttribute"))
+                {
+
+                    var value = p.GetValue(rep);
+
+                    bool preechido = true;
+
+                    if (value is string && String.IsNullOrWhiteSpace(value as string))
+                        preechido = false;
+                    if (value == null)
+                        preechido = false;
+                    if (value is double)
+                    {
+                        if ((double)value == 0)
+                            preechido = false;
+                    }
+
+
+                    camposObrigatorios.Add(a.NamedArguments
+                                            .Where(x => x.MemberName == "ErrorMessage")
+                                            .Select(x => x.TypedValue.Value.ToString())
+                                            .FirstOrDefault(),
+                                            preechido); //se for nulo ==falso
+
+
+                }
+
+            }
+        }
+
+        foreach (var c in camposObrigatorios)
+        {
+            if (!c.Value)
+            {
+                Title = "Obrigatório";
+                Error = c.Key;
+            }
+
+        }
+        return !camposObrigatorios.Any(x => !x.Value);
+    }
+
+    private void Fechar(dynamic result)
+    {
+        rep = new RequisicaoPessoal();
+        Rep = new RequisicaoPessoal();
+        dialogService.Close(result);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Rep != null)
+        {
+            rep = Rep;
+            SetValuesByparameters();
+        }
+
+
+        if (Opcao != null)
+            this.opcao = Opcao;
+
+        if (opcao == Opcoes.Alterar || opcao == Opcoes.Incluir)
+        {
+            disabled = false;
+        }
+        else
+        {
+            disabled = true;
+        }
+    }
+
+
+    private async void SetValuesByparameters()
+    {
+
+        // Convert.ToDateTime(rep.QS_DTABERT);
+        this.centroCusto = rep.QS_CC;
+
+
+        var municipio = await this.municipiosServices.GetCodigoIbgeByCidade(rep.QS_XCIDADE);
+
+        if (municipio != null)
+        {
+            this.estado = municipio.CC2_EST;
+            await SetUF(estado);
+            this.codigoIbge = municipio.CC2_CODMUN;
+
+        }
+
+
+        this.nomeResponsavel = session.Funcionario.RA_NOME;
+        this.rep.QS_XRESPPO = rep.QS_XRESPPO;
+        this.rep.QS_FILRESP = session.Funcionario.RA_FILIAL;
+        this.rep.QS_MATRESP = session.Funcionario.RA_MAT;
+        //this.rep.QS_AUTOM = "2";
+        this.rep.QS_REINSC = "1";
+        this.rep.QS_SOLICIT = session.Funcionario.RA_NOME;
+        this.codigoCargo = rep.QS_FUNCAO;
+        //   this.periculosidade = rep.QS_XPERICU == "SIM" ? true : false;
+
+        await SetFilial(this.rep.QS_XFILVAG);
+        this.matricula = rep.QS_XDEMITI;
+        filialRef.SelectedItem = empresas.FindIndex(c => c.M0_CODFIL.Trim() == this.rep.QS_XFILVAG);
+
+        if (!String.IsNullOrWhiteSpace(rep.QS_XFINALI))
+            this.finalidadeContratacao = Convert.ToInt32(rep.QS_XFINALI);
+
+
+
+        if (!String.IsNullOrWhiteSpace(rep.QS_XSUSBMO))
+            this.codigoSubstituicao = Convert.ToInt32(rep.QS_XSUSBMO);
+
+        this.codigoTurno = rep.QS_XTURNO;
+
+        if (!String.IsNullOrWhiteSpace(rep.QS_XJORNAD))
+            this.codigoJornada = Convert.ToInt32(rep.QS_XJORNAD);
+
+        this.marcaPonto = rep.QS_XMPONTO == "SIM" ? true : false;
+        this.temBancoDeHoras = rep.QS_XBCOHS == "SIM" ? true : false;
+
+        //if (!String.IsNullOrWhiteSpace(rep.QS_TIPO))
+        //    this.tipoVaga = Convert.ToInt32(rep.QS_TIPO);
+
+        if (!string.IsNullOrWhiteSpace(rep.QS_DTABERT))
+            this.emissao = DateTime.ParseExact(rep.QS_DTABERT, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+
+        if (!string.IsNullOrWhiteSpace(rep.QS_XDATAMO))
+            this.dataMovimento = DateTime.ParseExact(rep.QS_XDATAMO, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+
+        //if (!string.IsNullOrWhiteSpace(rep.QS_XPREVFE))
+        //    this.previsaoFechamento = DateTime.ParseExact(rep.QS_XPREVFE, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+
+
+        //this.area = rep.QS_AREA;
+        //areaRef.SelectedItem = tabelaR1.FindIndex(c => c.X5_CHAVE.Trim() == this.area);
+
+        this.detalhesVaga = await this.repService.ObterDetalhesDaVaga(rep);
+
+        this.StateHasChanged();
+    }
+
+
+    private void SetData(DateTime? data)
+    {
+
+        this.rep.QS_DTABERT = data.HasValue ? data.Value.ToString("yyyyMMdd") : "";
+    }
+
+    private void SetDataMovimento(DateTime? data)
+    {
+
+        this.rep.QS_XDATAMO = data.HasValue ? data.Value.ToString("yyyyMMdd") : "";
+    }
+    private void SetDataFechamento(DateTime? data)
+    {
+
+        this.rep.QS_XPREVFE = data.HasValue ? data.Value.ToString("yyyyMMdd") : "";
+    }
+
+
+    private void SetCentroCusto(object valor)
+    {
+        if (valor is string)
+        {
+            this.rep.QS_CC = valor as string;
+            this.rep.QS_XDPROJE = centrosDeCustos.Where(c => c.CTT_CUSTO == (valor as string))
+                                        .Select(c => c.CTT_DESC01)
+                                        .FirstOrDefault();
+        }
+
+    }
+
+    private async Task SetUF(object uf)
+    {
+
+        if (uf is string)
+        {
+            this.estado = uf as string;
+            municipiosUF = await municipiosServices.ListMunicipiosByUF(estado);
+
+
+        }
+
+    }
+
+    private async Task SetMunicipioUF(object _cogidoIBGE)
+    {
+        if (_cogidoIBGE is string)
+        {
+            municipioUF = await this.municipiosServices.GetByCodigoIbgeUF(codigoIbge, estado);
+            this.rep.QS_XCIDADE = municipioUF.CC2_MUN;
+        }
+    }
+
+    private async Task SetFilial(object _filial)
+    {
+        if (_filial is string)
+        {
+
+            funcionarios = funcionarioService.ListAllByFilialAll(rep.QS_XFILVAG, session.Departamentos.QB_DEPTO);
+            funcionariosEponto = funcionarioService.ListAllByFilial(rep.QS_XFILVAG);
+            funcionariosEpontoOperacional = funcionarioService.ListAllByFilial(rep.QS_XFILVAG);
+        }
+    }
+
+    private async Task SetCargo(object cargo)
+    {
+        if (cargo is string)
+        {
+            this.codigoCargo = cargo as string;
+            this.rep.QS_FUNCAO = codigoCargo;
+
+
+            this.rep.QS_XFUNCAO = cargos.Where(x => x.Q3_CARGO == codigoCargo)
+                                    .Select(c => c.Q3_DESCSUM)
+                                    .FirstOrDefault();
+            this.rep.QS_DESCRIC = this.rep.QS_XFUNCAO;
+        }
+    }
+
+    //private async Task SetPericulosidade()
+    //{
+
+    //    this.rep.QS_XPERICU = this.periculosidade ? "SIM" : "NAO";
+
+    //}
+
+    private async Task SetTurno(object turno)
+    {
+        if (turno is string)
+        {
+            this.codigoTurno = turno as string;
+            this.rep.QS_XTURNO = codigoTurno;
+            this.rep.QS_XDESCTU = turnos
+                                    .Where(x => x.R6_TURNO == codigoCargo)
+                                    .Select(x => x.R6_DESC)
+                                    .FirstOrDefault();
+
+        }
+    }
+
+    private async Task SetJornada(int jornada)
+    {
+        rep.QS_XJORNAD = Convert.ToString(jornada);
+    }
+
+    private async Task SetFinalidade(int finalidade)
+    {
+        rep.QS_XFINALI = Convert.ToString(finalidade);
+    }
+
+    public async Task SetFuncionarioASubstituir(object mat)
+    {
+        if (mat is string)
+        {
+            this.matricula = mat as string;
+            this.rep.QS_XDEMITI = mat as string;
+
+            var funcionario = this.funcionarioService.GetByMatricula(this.rep.QS_XDEMITI, rep.QS_XFILVAG);
+
+            await SetCargo(funcionario.RA_CARGO);
+
+        if (!string.IsNullOrWhiteSpace(funcionario.RA_DEMISSA))
+            {
+                dataMovimento = DateTime.ParseExact(funcionario.RA_DEMISSA, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+        }
+    }
+
+    public async Task SetFuncionarioASubstituirEponto(object mat)
+    {
+        if (mat is string)
+        {
+            this.matriculaEponto = mat as string;
+            this.rep.QS_XRESPPO = this.matriculaEponto;
+        }
+    }
+    public async Task SetFuncionarioASubstituirEponto2(object mat)
+    {
+        if (mat is string)
+        {
+            this.matriculaEpontoOperacional = mat as string;
+            this.rep.QS_XAPOPON = matriculaEpontoOperacional;
+        }
+    }
+
+    public async Task SetMotivoSubstituicao(int motivo)
+    {
+
+        //1-Demissão ; 2-Promoção ; 3-Afastamento ; 4-Tranferência
+        rep.QS_XSUSBMO = Convert.ToString(motivo);
+    }
+
+    private void SetMarcaPonto()
+    {
+        rep.QS_XMPONTO = marcaPonto ? "SIM" : "NAO";
+    }
+
+    private void SetBancoDeHoras()
+    {
+        rep.QS_XBCOHS = temBancoDeHoras ? "SIM" : "NAO";
+    }
+
+    //private void SetTipoVaga(int tipo)
+    //{
+    //    //1=Int./Ext.;2=Interna;3=Externa
+    //    rep.QS_TIPO = Convert.ToString(tipo);
+    //}
+
+    //private async Task SetArea(object _area)
+    //{
+    //    if (_area is string)
+    //    {
+    //        this.rep.QS_AREA = area;
+    //    }
+    //}
+
+
+}

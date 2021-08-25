@@ -1,0 +1,36 @@
+﻿
+@using Models.Tickets
+
+@if (Imagens != null)
+{
+    <div class="row">
+
+        @foreach (var imagem in Imagens)
+        {
+            @if (extensoesImagens.Contains(imagem.Extensao))
+            {
+                <div class="col-12 col-md-12 col-lg-12">
+                    <RadzenImage Path="@string.Format($"data:image/{imagem.Extensao.Replace(".", "")};base64," + "{0}", imagem.ImgBase64)" class="img-fluid rounded float-left imageUpload" />
+                </div>
+            }
+            else
+            {
+                <div class="col-12">
+                    <p>@imagem.NomeOriginal - @imagem.Tamanho bytes</p>
+                </div>
+            }
+
+
+        }
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public IList<ImagensTickets> Imagens { get; set; }
+
+    
+    private string[] extensoesImagens = new string[] { ".jpg", ".png", ".jpeg", ".gif", ".pdf", ".doc", ".docx", ".xls", ".csv", ".xlsx" };
+
+}

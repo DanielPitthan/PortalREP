@@ -1,0 +1,37 @@
+﻿@page "/NaoAutorizado/{Titulo}/{Texto}"
+@page "/NaoAutorizado"
+
+
+
+@layout MainLayout
+@inject NavigationManager navigation;
+
+<Container Style="margin-top:5em;">
+    <Row>
+        <div class="col col-6">
+            <MatPaper Elevation="5">
+                <Card>
+                    <CardBody>
+                        <CardTitle Size="5">
+                            <CardImage Source="/_content/img/Icons/cancel.png" Style="width:25px; margin-left:10px;"></CardImage>@Titulo
+                        </CardTitle>
+                        <CardText Style="margin-bottom:1rem;">
+                            @Texto
+                        </CardText>
+                        <Button Color="Color.Primary" @onclick="@(()=> { navigation.NavigateTo("/home"); })">Voltar</Button>
+                    </CardBody>
+                </Card>
+            </MatPaper>
+        </div>
+    </Row>
+</Container>
+@code {
+
+    [Parameter]
+    public string Titulo { get; set; }
+    [Parameter]
+    public string Texto { get; set; }
+
+
+
+}
